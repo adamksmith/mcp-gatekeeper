@@ -13,16 +13,16 @@ MCP Gatekeeper adds a third option: **earned access**, scoped by intent and boun
 MCP Gatekeeper implements a three-tier access model where every tier transition requires a DUO push notification to your phone. The AI agent starts with nothing and must ask for what it needs.
 
 ```
-┌─────────────┐   DUO push    ┌─────────────┐   DUO push    ┌─────────────┐
-│  No Access   │─────────────▶│   Read-Only  │─────────────▶│  Read-Write  │
+┌─────────────────┐   DUO push    ┌─────────────────┐   DUO push    ┌─────────────────┐
+│  No Access   │──────────────▶│   Read-Only  │──────────────▶│  Read-Write  │
 │  (default)   │  authenticate │   (4hr TTL)  │   escalate   │  (15min TTL) │
-└─────────────┘               └─────────────┘               └─────────────┘
-                                     ▲                              │
-                                     │        expires (hard)        │
-                                     │◀─────────────────────────────┘
-                                     │      drops to RO, not No Access
-                              auto-renews
-                              on expiry (DUO push)
+└─────────────────┘               └─────────────────┘               └─────────────────┘
+                                       ▲                                 │
+                                       │        expires (hard)           │
+                                       │◀────────────────────────────────┘
+                                       │      drops to RO, not No Access
+                                auto-renews
+                                on expiry (DUO push)
 ```
 
 ### Consent Model
@@ -108,12 +108,12 @@ fastmcp run fastmcp.json
 mcp-gatekeeper/
 ├── src/mcp_gatekeeper/
 │   ├── __init__.py
-│   ├── __main__.py        # Entrypoint, env config, FastMCP server init
-│   ├── tools.py           # Six MCP tool definitions
-│   └── vault_client.py    # OpenBao HTTP client, token lifecycle, DUO flows
-├── Dockerfile             # Multi-stage build (uv + python:3.13-slim)
-├── fastmcp.json           # FastMCP server configuration
-└── pyproject.toml         # Python 3.13, fastmcp + httpx
+│   ├── __main__.py          # Entrypoint, env config, FastMCP server init
+│   ├── tools.py              # Six MCP tool definitions
+│   └── vault_client.py       # OpenBao HTTP client, token lifecycle, DUO flows
+├── Dockerfile                # Multi-stage build (uv + python:3.13-slim)
+├── fastmcp.json              # FastMCP server configuration
+└── pyproject.toml            # Python 3.13, fastmcp + httpx
 ```
 
 ## Related Projects
@@ -126,4 +126,4 @@ mcp-gatekeeper/
 
 ## License
 
-MIT
+Apache-2.0 — See [LICENSE](LICENSE) for details.
