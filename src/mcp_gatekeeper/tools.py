@@ -1,4 +1,4 @@
-"""MCP tool definitions for OpenBao."""
+"""MCP Gatekeeper tool definitions."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from .vault_client import VaultClient
 
 
 def register_tools(mcp: FastMCP, client: VaultClient) -> None:
-    """Register all OpenBao tools on the FastMCP server."""
+    """Register all gatekeeper tools on the FastMCP server."""
 
     @mcp.tool()
     async def authenticate() -> str:

@@ -84,7 +84,7 @@ class VaultClient:
         if self._has_valid_ro_token():
             return self.ro_token
 
-        print("[openbao-mcp] RO token expired or missing, re-authenticating via DUO...", file=sys.stderr)
+        print("[mcp-gatekeeper] RO token expired or missing, re-authenticating via DUO...", file=sys.stderr)
         await self.authenticate()
         return self.ro_token
 

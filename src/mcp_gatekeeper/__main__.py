@@ -1,4 +1,4 @@
-"""OpenBao MCP Server entrypoint."""
+"""MCP Gatekeeper entrypoint."""
 
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ def _get_server() -> FastMCP:
 
     client = VaultClient(addr=vault_addr, bootstrap_token=bootstrap_token)
 
-    _server = FastMCP(name="openbao-mcp", version="0.1.0")
+    _server = FastMCP(name="mcp-gatekeeper", version="0.1.0")
     register_tools(_server, client)
 
     return _server
