@@ -14,11 +14,11 @@ MCP Gatekeeper implements a three-tier access model where every tier transition 
 
 ```
 ┌─────────────────┐   DUO push    ┌─────────────────┐   DUO push    ┌─────────────────┐
-│  No Access   │──────────────▶│   Read-Only  │──────────────▶│  Read-Write  │
-│  (default)   │  authenticate │   (4hr TTL)  │   escalate   │  (15min TTL) │
+│   No Access  │──────────────▶│   Read-Only  │──────────────▶│  Read-Write  │
+│   (default)  │  authenticate │   (4hr TTL)  │   escalate   │  (15min TTL) │
 └─────────────────┘               └─────────────────┘               └─────────────────┘
                                        ▲                                 │
-                                       │        expires (hard)           │
+                                       │    expires (hard) / deescalate  │
                                        │◀────────────────────────────────┘
                                        │      drops to RO, not No Access
                                 auto-renews
@@ -35,23 +35,24 @@ MCP Gatekeeper implements a three-tier access model where every tier transition 
 
 No permanent tokens. No cached credentials. Three tokens, three policies, each with only enough access to reach the next step:
 
-1. **Bootstrap token** — Injected by Vault Secrets Operator (VSO). Can *only* read `secret/data/claude/ro-login`. Effectively inert without your phone.
-2. **RO token** — Obtained via `claude-ro` userpass login + DUO push. Can read secrets and read `secret/data/claude/rw-login` to enable escalation.
+1. **Bootstrap token** — Injected by Vault Secrets Operator (VSO). Can only read `secret/data/claude/ro-login` and `secret/data/claude/rw-login`. Effectively inert without your phone.
+2. **RO token** — Obtained via `claude-ro` userpass login + DUO push. Can read secrets within scoped paths.
 3. **RW token** — Obtained via `claude-rw` userpass login + second DUO push. Can read and write secrets within scoped paths.
 
 Even if the bootstrap token is compromised, an attacker can only *request* authentication. The DUO push goes to your phone. A compromised token becomes an alert system, not a silent exfiltration vector.
 
 ## Tools
 
-MCP Gatekeeper exposes six tools to the AI agent:
+MCP Gatekeeper exposes seven tools to the AI agent:
 
 | Tool | Requires | Description |
 |------|----------|-------------|
 | `authenticate` | Nothing | Trigger DUO push to obtain RO token (4hr). Reads auto-trigger this, so explicit use is optional. |
 | `escalate` | RO | Trigger second DUO push to obtain RW token (15min). Required before any write. |
-| `read_secret` | RO+ | Read a KV v2 secret. Auto-renews expired RO token. |
+| `deescalate` | RW | Revoke the RW token immediately and drop back to RO. Good practice after completing write tasks. |
+| `read_secret` | RO+ | Read a KV v2 secret. Uses RW token if held (bypasses RO deny rules), otherwise auto-renews RO. |
 | `write_secret` | RW | Write a KV v2 secret. **No auto-renewal** — explicit escalation required. |
-| `list_secrets` | RO+ | List secret keys at a path. Auto-renews expired RO token. |
+| `list_secrets` | RO+ | List secret keys at a path. Uses RW token if held, otherwise auto-renews RO. |
 | `token_status` | Nothing | Report current tier and remaining TTL for held tokens. |
 
 ## Prerequisites
@@ -118,11 +119,7 @@ mcp-gatekeeper/
 
 ## Related Projects
 
-- **[ha-mcp-guardian](https://git.adamksmith.xyz/adamksmith/ha-mcp-guardian)** — Companion project applying the same zero-trust patterns to Home Assistant entity control. Because "AI should be able to read your thermostat" and "AI should be able to unlock your front door" are very different statements.
-
-## Status
-
-🚧 **Active development.** The token brokering architecture is solid but OpenBao policy configuration, K8s manifests, and integration tests are in progress.
+- **[homelab-mcp](https://github.com/adamksmith/homelab-mcp)** — Infrastructure context MCP server for homelab documentation and operational knowledge.
 
 ## License
 
