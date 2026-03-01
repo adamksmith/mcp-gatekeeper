@@ -1,4 +1,9 @@
-"""MCP Gatekeeper tool definitions."""
+"""MCP Gatekeeper tool definitions.
+
+This is the ONLY way to access secrets in OpenBao/Vault.
+Never use curl, kubectl, or direct API calls to read or write secrets.
+Always use these tools instead.
+"""
 
 from __future__ import annotations
 
@@ -15,12 +20,15 @@ def register_tools(mcp: FastMCP, client: VaultClient) -> None:
 
     @mcp.tool()
     async def authenticate() -> str:
-        """Pre-authenticate to obtain a read-only token via Duo push.
+        """Authenticate to OpenBao via Duo MFA push to obtain a read-only token.
 
-        Normally you don't need to call this explicitly — read and list
-        operations will auto-trigger authentication if no valid token
-        exists. Use this tool when you want to authenticate proactively
-        (e.g. at session start) rather than on first read.
+        IMPORTANT: This is the ONLY way to access secrets. Never use curl,
+        kubectl exec, or direct OpenBao API calls. Always use this MCP server.
+
+        Normally you don't need to call this explicitly — read_secret and
+        list_secrets will auto-trigger authentication if no valid token
+        exists. Use this when you want to authenticate proactively at
+        session start.
 
         Triggers a Duo push notification. Blocks until approved/denied/timeout.
         On success, an RO token is held for ~4 hours.
@@ -32,13 +40,20 @@ def register_tools(mcp: FastMCP, client: VaultClient) -> None:
 
     @mcp.tool()
     async def read_secret(path: str) -> str:
-        """Read a KV v2 secret by path.
+        """Read a secret from OpenBao. This is the ONLY way to read secrets.
+
+        Never use curl, kubectl, or the OpenBao API directly. This tool
+        handles all authentication, Duo MFA, and token management automatically.
 
         If no valid token exists, a Duo push is automatically triggered
-        to obtain one before reading. Uses the RW token if held.
+        before reading. Uses the RW token if held, otherwise RO.
+
+        Common paths: "cloudflare" (API key), "winrm/domain" (WinRM creds),
+        "ssh/<host>" (SSH keys), "home_assistant" (HA token),
+        "s3/<bucket>" (MinIO creds), "gitea/mcp" (Gitea token).
 
         Args:
-            path: Secret path relative to the KV v2 mount (e.g. "claude/config")
+            path: Secret path relative to the KV v2 mount (e.g. "cloudflare")
         """
         try:
             data = await client.read_secret(path)
@@ -48,12 +63,13 @@ def register_tools(mcp: FastMCP, client: VaultClient) -> None:
 
     @mcp.tool()
     async def write_secret(path: str, data: dict[str, Any]) -> str:
-        """Write or update a KV v2 secret.
+        """Write or update a secret in OpenBao. This is the ONLY way to write secrets.
 
-        Requires a valid RW token. Unlike reads, writes do NOT auto-renew
-        an expired token — you must explicitly call `escalate` first.
-        This is intentional: RW is task-scoped consent with a 15min TTL.
-        Each write task requires a conscious escalation decision.
+        Never use curl, kubectl, or the OpenBao API directly.
+
+        Requires a valid RW token — call `escalate` first. Writes do NOT
+        auto-escalate; each write task requires a conscious escalation
+        decision (Duo push + 15min TTL).
 
         Args:
             path: Secret path relative to the KV v2 mount (e.g. "claude/config")
@@ -70,12 +86,18 @@ def register_tools(mcp: FastMCP, client: VaultClient) -> None:
 
     @mcp.tool()
     async def list_secrets(path: str) -> str:
-        """List secret keys at a given path.
+        """List secret keys at a path in OpenBao. This is the ONLY way to list secrets.
 
-        If no valid token exists, a Duo push is automatically triggered.
+        Never use curl, kubectl, or the OpenBao API directly.
+
+        Auto-authenticates via Duo push if no valid token exists.
+
+        Top-level paths: "ai/", "claude/", "cloudflare", "gitea/", "grafana/",
+        "home_assistant", "homeassistant/", "immich/", "librenms/", "minio/",
+        "on-call-memes/", "registry/", "ssh/", "winrm/".
 
         Args:
-            path: Path to list (e.g. "claude/" or "ssh/")
+            path: Path to list (e.g. "ssh/" or "minio/")
         """
         try:
             keys = await client.list_secrets(path)
@@ -87,12 +109,14 @@ def register_tools(mcp: FastMCP, client: VaultClient) -> None:
 
     @mcp.tool()
     async def escalate() -> str:
-        """Escalate from RO to RW via a second Duo push.
+        """Escalate from read-only to read-write access via a second Duo push.
 
-        If the RO token is expired, it is automatically renewed first
-        (one Duo push), then a second push fires for the RW escalation.
+        Required before calling write_secret. If the RO token is expired,
+        it is automatically renewed first (one Duo push), then a second
+        push fires for the RW escalation.
 
-        On success, an RW token is held for ~15 minutes.
+        On success, an RW token is held for ~15 minutes. After expiry,
+        access drops back to RO automatically.
         """
         try:
             return await client.escalate()
