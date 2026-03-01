@@ -173,10 +173,10 @@ class VaultClient:
         2. Login via userpass to get an MFA request ID
         3. Validate MFA (triggers Duo push) → RW token (15min TTL)
         """
-        ro_token = await self._ensure_ro_token()
+        await self._ensure_ro_token()
 
         password_data = await self._read_with_token(
-            "secret/data/claude/rw-login", ro_token
+            "secret/data/claude/rw-login", self._bootstrap_token
         )
         password = password_data.get("password")
         if not password:
