@@ -46,3 +46,11 @@ class _DeferredMCP:
 
 
 mcp = _DeferredMCP()
+
+
+def main():
+    _get_server().run(transport="stdio")
+
+
+if __name__ == "__main__":
+    main()

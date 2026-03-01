@@ -252,9 +252,10 @@ class VaultClient:
 
         mfa_resp = await self._http.post(
             "/v1/sys/mfa/validate",
+            headers=self._headers(self._bootstrap_token),
             json={
                 "mfa_request_id": mfa_request_id,
-                "mfa_payload": {DUO_METHOD_ID: ["passcode=push"]},
+                "mfa_payload": {DUO_METHOD_ID: []},
             },
         )
         mfa_resp.raise_for_status()
