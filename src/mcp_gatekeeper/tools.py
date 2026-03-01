@@ -124,6 +124,19 @@ def register_tools(mcp: FastMCP, client: VaultClient) -> None:
             return f"Escalation failed: {e}"
 
     @mcp.tool()
+    async def deescalate() -> str:
+        """Revoke the RW token and drop back to read-only access.
+
+        Use this when you're done with write operations to immediately
+        revoke the RW token rather than waiting for the 15min TTL to expire.
+        Good practice after completing a write task.
+        """
+        try:
+            return await client.deescalate()
+        except Exception as e:
+            return f"De-escalation failed: {e}"
+
+    @mcp.tool()
     async def token_status() -> str:
         """Check current access tier and token state.
 

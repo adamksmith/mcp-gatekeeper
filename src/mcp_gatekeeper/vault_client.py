@@ -199,6 +199,34 @@ class VaultClient:
             f"{lease_duration}s TTL (expires {self.rw_token_expiry.isoformat()})."
         )
 
+    # ── De-escalation (RW → RO) ────────────────────────────────────
+
+    async def deescalate(self) -> str:
+        """Revoke the RW token and drop back to RO.
+
+        Calls the OpenBao token revoke-self endpoint to immediately
+        invalidate the RW token rather than waiting for TTL expiry.
+        """
+        if not self._has_valid_rw_token():
+            return "No active RW token to revoke. Current tier: " + (
+                "ro" if self._has_valid_ro_token() else "no_access"
+            )
+
+        try:
+            resp = await self._http.post(
+                "/v1/auth/token/revoke-self",
+                headers=self._headers(self.rw_token),
+            )
+            resp.raise_for_status()
+        except Exception:
+            pass  # best-effort revoke; clear local state regardless
+
+        self.rw_token = None
+        self.rw_token_expiry = None
+
+        tier = "ro" if self._has_valid_ro_token() else "no_access"
+        return f"RW token revoked. Dropped to {tier}."
+
     # ── Token status ─────────────────────────────────────────────────
 
     def token_status(self) -> dict:
