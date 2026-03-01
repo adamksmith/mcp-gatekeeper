@@ -137,6 +137,19 @@ def register_tools(mcp: FastMCP, client: VaultClient) -> None:
             return f"De-escalation failed: {e}"
 
     @mcp.tool()
+    async def logout() -> str:
+        """Revoke all tokens and drop to no_access.
+
+        Revokes both RO and RW tokens immediately rather than waiting
+        for TTL expiry. Use at the end of a session or when you want
+        to fully disconnect from OpenBao.
+        """
+        try:
+            return await client.logout()
+        except Exception as e:
+            return f"Logout failed: {e}"
+
+    @mcp.tool()
     async def token_status() -> str:
         """Check current access tier and token state.
 

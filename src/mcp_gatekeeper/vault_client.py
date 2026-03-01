@@ -237,6 +237,47 @@ class VaultClient:
         tier = "ro" if self._has_valid_ro_token() else "no_access"
         return f"RW token revoked. Dropped to {tier}."
 
+    # ── Logout (any → No Access) ──────────────────────────────────
+
+    async def logout(self) -> str:
+        """Revoke all held tokens and drop to no_access.
+
+        Best-effort revocation — clears local state regardless of whether
+        the remote revoke calls succeed.
+        """
+        if not self._has_valid_ro_token() and not self._has_valid_rw_token():
+            return "Already at no_access. No tokens to revoke."
+
+        revoked = []
+
+        if self._has_valid_rw_token():
+            try:
+                resp = await self._http.post(
+                    "/v1/auth/token/revoke-self",
+                    headers=self._headers(self.rw_token),
+                )
+                resp.raise_for_status()
+            except Exception:
+                pass
+            self.rw_token = None
+            self.rw_token_expiry = None
+            revoked.append("RW")
+
+        if self._has_valid_ro_token():
+            try:
+                resp = await self._http.post(
+                    "/v1/auth/token/revoke-self",
+                    headers=self._headers(self.ro_token),
+                )
+                resp.raise_for_status()
+            except Exception:
+                pass
+            self.ro_token = None
+            self.ro_token_expiry = None
+            revoked.append("RO")
+
+        return f"{' and '.join(revoked)} token(s) revoked. Dropped to no_access."
+
     # ── Token status ─────────────────────────────────────────────────
 
     def token_status(self) -> dict:

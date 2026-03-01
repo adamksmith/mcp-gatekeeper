@@ -17,12 +17,13 @@ MCP Gatekeeper implements a three-tier access model where every tier transition 
 │   No Access  │──────────────▶│   Read-Only  │──────────────▶│  Read-Write  │
 │   (default)  │  authenticate │   (4hr TTL)  │   escalate   │  (15min TTL) │
 └─────────────────┘               └─────────────────┘               └─────────────────┘
-                                       ▲                                 │
-                                       │    expires (hard) / deescalate  │
-                                       │◀────────────────────────────────┘
-                                       │      drops to RO, not No Access
-                                auto-renews
-                                on expiry (DUO push)
+        ▲                              ▲  │                              │
+        │           logout             │  │ auto-renews on expiry        │
+        │◀─────────────────────────────┘  │ (DUO push)                   │
+        │                                 │                              │
+        │              logout             │  expires (hard) / deescalate │
+        │◀────────────────────────────────│◀─────────────────────────────┘
+                                          │     drops to RO, not No Access
 ```
 
 ### Consent Model
@@ -43,13 +44,14 @@ Even if the bootstrap token is compromised, an attacker can only *request* authe
 
 ## Tools
 
-MCP Gatekeeper exposes seven tools to the AI agent:
+MCP Gatekeeper exposes eight tools to the AI agent:
 
 | Tool | Requires | Description |
 |------|----------|-------------|
 | `authenticate` | Nothing | Trigger DUO push to obtain RO token (4hr). Reads auto-trigger this, so explicit use is optional. |
 | `escalate` | RO | Trigger second DUO push to obtain RW token (15min). Required before any write. |
 | `deescalate` | RW | Revoke the RW token immediately and drop back to RO. Good practice after completing write tasks. |
+| `logout` | RO+ | Revoke all tokens and drop to no_access. Use at session end for full disconnection. |
 | `read_secret` | RO+ | Read a KV v2 secret. Uses RW token if held (bypasses RO deny rules), otherwise auto-renews RO. |
 | `write_secret` | RW | Write a KV v2 secret. **No auto-renewal** — explicit escalation required. |
 | `list_secrets` | RO+ | List secret keys at a path. Uses RW token if held, otherwise auto-renews RO. |
