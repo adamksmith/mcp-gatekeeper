@@ -105,6 +105,8 @@ fastmcp run fastmcp.json
 
 **Design for compromise.** Assume the OAuth/OIDC stack gets compromised. What's the blast radius? With Gatekeeper, a compromised auth flow can only *request* tokens — DUO push approval still goes to your physical device. The architecture treats every layer as already breached and asks "what's the worst that can happen?"
 
+**Session state as authorization context.** Most MCP servers are stateless — same input, same output, every time. Gatekeeper maintains a server-side state machine that changes the behavior of every tool call. The same `read_secret` call to the same path returns data or 403 depending on accumulated session context, not input parameters. DUO approvals are mutations to that context. The MCP spec has no concept of servers whose tool behavior changes based on progressive trust decisions — Gatekeeper is effectively stateful MCP, where the agent's capabilities evolve over the course of a session based on explicit human consent.
+
 ## Project Structure
 
 ```
